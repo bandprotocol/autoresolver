@@ -23,7 +23,6 @@ async function onNewTask(address, onChainID, resolveTime, blockNumber) {
     },
   })
 
-  console.log('O', onChainID, addressToID[address])
   if (!task) {
     const mt = await Task.create({
       contractID: addressToID[address],
@@ -31,7 +30,6 @@ async function onNewTask(address, onChainID, resolveTime, blockNumber) {
       finishedAt: resolveTime,
       status: 'WAITING',
     })
-    // console.log(mt)
   }
 
   await Setting.update(
@@ -44,8 +42,6 @@ async function onNewTask(address, onChainID, resolveTime, blockNumber) {
       },
     },
   )
-
-  web3.sendResolveTransaction(address, onChainID)
 }
 
 async function onTaskResolved(address, onChainID, blockNumber) {
@@ -69,23 +65,16 @@ async function onTaskResolved(address, onChainID, blockNumber) {
     },
   })
 
-  tasks.forEach(task =>
-    console.log(
-      task.get({
-        plain: true,
-      }),
-    ),
-  ),
-    await Setting.update(
-      {
-        value: blockNumber,
+  await Setting.update(
+    {
+      value: blockNumber,
+    },
+    {
+      where: {
+        key: 'last_block_processed',
       },
-      {
-        where: {
-          key: 'last_block_processed',
-        },
-      },
-    )
+    },
+  )
 }
 
 async function onEventLoop() {
@@ -94,6 +83,11 @@ async function onEventLoop() {
   const waitingTask = await Task.findAll({
     where: {
       status: 'WAITING',
+    },
+  })
+  const resolveingTask = await Task.findAll({
+    where: {
+      status: 'RESOLVING',
     },
   })
   const resolvedTask = await Task.findAll({
@@ -108,10 +102,28 @@ async function onEventLoop() {
     waitingTask.length,
     'Resolved',
     resolvedTask.length,
+    'Resolving',
+    resolveingTask.length,
   )
+  const now = new Date()
+  const needResolvedTasks = await Task.findAll({
+    include: [
+      {
+        model: Contract,
+      },
+    ],
+    where: {
+      status: 'WAITING',
+      finishedAt: {
+        [Op.lt]: now,
+      },
+    },
+  })
 
-  // console.log('show all task')
-  // allTask.forEach(task => console.log(task.get({ plain: true })))
+  for (const task of needResolvedTasks) {
+    web3.sendResolveTransaction(task.contract.address, task.onChainID)
+    task.update({ status: 'RESOLVING' })
+  }
 }
 
 // TODO: Initialize database here

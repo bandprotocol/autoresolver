@@ -1,0 +1,23 @@
+{
+  "name": "resolver",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "git@github.com:bandprotocol/resolver.git",
+  "author": "Band Protocol <connect@bandprotocol.com>",
+  "dependencies": {
+    "delay": "^4.1.0",
+    "koa": "^2.6.2",
+    "mysql2": "^1.6.4",
+    "sequelize": "^4.41.2",
+    "sqlite3": "^4.0.4",
+    "web3": "^1.0.0-beta.36"
+  },
+  "eslintConfig": {
+    "extends": "react-app"
+  },
+  "prettier": {
+    "trailingComma": "all",
+    "semi": false,
+    "singleQuote": true
+  }
+}

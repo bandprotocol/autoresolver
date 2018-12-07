@@ -16,16 +16,23 @@ async function onNewTask(address, onChainID, resolveTime, blockNumber) {
     console.log(`This contract address ${address} doesn't appear in database`)
   }
 
-  await Task.findOrCreate({
+  const task = await Task.findOne({
     where: {
       contractID: addressToID[address],
       onChainID: onChainID,
     },
-    defaults: {
+  })
+
+  console.log('O', onChainID, addressToID[address])
+  if (!task) {
+    const mt = await Task.create({
+      contractID: addressToID[address],
+      onChainID,
       finishedAt: resolveTime,
       status: 'WAITING',
-    },
-  })
+    })
+    // console.log(mt)
+  }
 
   await Setting.update(
     {
@@ -37,21 +44,80 @@ async function onNewTask(address, onChainID, resolveTime, blockNumber) {
       },
     },
   )
+
+  web3.sendResolveTransaction(address, onChainID)
 }
 
 async function onTaskResolved(address, onChainID, blockNumber) {
-  console.log('TASK RESOLVED', address, onChainID, blockNumber)
+  console.log('Resolve', addressToID[address], onChainID)
+  await Task.update(
+    {
+      status: 'RESOLVED',
+    },
+    {
+      where: {
+        contractID: addressToID[address],
+        onChainID: onChainID,
+      },
+    },
+  )
+
+  const tasks = await Task.findAll({
+    where: {
+      contractID: addressToID[address],
+      onChainID: onChainID,
+    },
+  })
+
+  tasks.forEach(task =>
+    console.log(
+      task.get({
+        plain: true,
+      }),
+    ),
+  ),
+    await Setting.update(
+      {
+        value: blockNumber,
+      },
+      {
+        where: {
+          key: 'last_block_processed',
+        },
+      },
+    )
 }
 
 async function onEventLoop() {
-  console.log('EVENT LOOP')
+  // console.log('EVENT LOOP')
   const allTask = await Task.findAll()
-  console.log('Length = ', allTask.length)
+  const waitingTask = await Task.findAll({
+    where: {
+      status: 'WAITING',
+    },
+  })
+  const resolvedTask = await Task.findAll({
+    where: {
+      status: 'RESOLVED',
+    },
+  })
+  console.log(
+    'Length = ',
+    allTask.length,
+    'Waiting',
+    waitingTask.length,
+    'Resolved',
+    resolvedTask.length,
+  )
+
+  // console.log('show all task')
+  // allTask.forEach(task => console.log(task.get({ plain: true })))
 }
 
 // TODO: Initialize database here
 const sequelize = new Sequelize('db', 'band', 'band', {
   dialect: 'sqlite',
+  logging: false,
 })
 
 const Contract = sequelize.define('contract', {
@@ -60,23 +126,43 @@ const Contract = sequelize.define('contract', {
     primaryKey: true,
     autoIncrement: true,
   },
-  address: Sequelize.STRING,
-  contractType: Sequelize.STRING,
+  address: {
+    allowNull: false,
+    type: Sequelize.STRING,
+  },
+  contractType: {
+    allowNull: false,
+    type: Sequelize.STRING,
+  },
   subscribe: Sequelize.BOOLEAN,
 })
 
-const Task = sequelize.define('task', {
-  id: {
-    type: Sequelize.INTEGER,
-    primaryKey: true,
-    autoIncrement: true,
+const Task = sequelize.define(
+  'task',
+  {
+    id: {
+      type: Sequelize.INTEGER,
+      primaryKey: true,
+      autoIncrement: true,
+    },
+    onChainID: {
+      allowNull: false,
+      type: Sequelize.INTEGER,
+    },
+    finishedAt: Sequelize.DATE,
+    status: Sequelize.STRING,
   },
-  onchainID: Sequelize.INTEGER,
-  finishedAt: Sequelize.DATE,
-  status: Sequelize.STRING,
-})
+  {
+    indexes: [
+      {
+        unique: true,
+        fields: ['contractID', 'onChainID'],
+      },
+    ],
+  },
+)
 
-Task.belongsTo(Contract)
+Task.belongsTo(Contract, { foreignKey: 'contractID' })
 
 const Setting = sequelize.define('setting', {
   key: Sequelize.STRING,

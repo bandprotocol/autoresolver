@@ -1,0 +1,911 @@
+{
+  "TCR": [
+    {
+      "constant": true,
+      "inputs": [
+        {
+          "name": "",
+          "type": "bytes32"
+        }
+      ],
+      "name": "entries",
+      "outputs": [
+        {
+          "name": "proposer",
+          "type": "address"
+        },
+        {
+          "name": "withdrawableDeposit",
+          "type": "uint256"
+        },
+        {
+          "name": "pendingExpiration",
+          "type": "uint256"
+        },
+        {
+          "name": "challengeID",
+          "type": "uint256"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "prefix",
+      "outputs": [
+        {
+          "name": "",
+          "type": "bytes8"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [
+        {
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "name": "challenges",
+      "outputs": [
+        {
+          "name": "entryData",
+          "type": "bytes32"
+        },
+        {
+          "name": "challenger",
+          "type": "address"
+        },
+        {
+          "name": "rewardPool",
+          "type": "uint256"
+        },
+        {
+          "name": "remainingVotes",
+          "type": "uint256"
+        },
+        {
+          "name": "snapshotBlockno",
+          "type": "uint256"
+        },
+        {
+          "name": "commitEndTime",
+          "type": "uint256"
+        },
+        {
+          "name": "revealEndTime",
+          "type": "uint256"
+        },
+        {
+          "name": "yesCount",
+          "type": "uint256"
+        },
+        {
+          "name": "noCount",
+          "type": "uint256"
+        },
+        {
+          "name": "result",
+          "type": "uint8"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "params",
+      "outputs": [
+        {
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "token",
+      "outputs": [
+        {
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "name": "_prefix",
+          "type": "bytes8"
+        },
+        {
+          "name": "_params",
+          "type": "address"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "name": "data",
+          "type": "bytes32"
+        },
+        {
+          "indexed": true,
+          "name": "proposer",
+          "type": "address"
+        }
+      ],
+      "name": "ApplicationSubmitted",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "name": "data",
+          "type": "bytes32"
+        },
+        {
+          "indexed": true,
+          "name": "proposer",
+          "type": "address"
+        }
+      ],
+      "name": "EntryDeleted",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "name": "data",
+          "type": "bytes32"
+        },
+        {
+          "indexed": true,
+          "name": "proposer",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "name": "value",
+          "type": "uint256"
+        }
+      ],
+      "name": "EntryDeposited",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "name": "data",
+          "type": "bytes32"
+        },
+        {
+          "indexed": true,
+          "name": "proposer",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "name": "value",
+          "type": "uint256"
+        }
+      ],
+      "name": "EntryWithdrawn",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "name": "data",
+          "type": "bytes32"
+        },
+        {
+          "indexed": true,
+          "name": "proposer",
+          "type": "address"
+        }
+      ],
+      "name": "EntryExited",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "name": "data",
+          "type": "bytes32"
+        },
+        {
+          "indexed": true,
+          "name": "challengeID",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "name": "challenger",
+          "type": "address"
+        }
+      ],
+      "name": "ChallengeInitiated",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "name": "data",
+          "type": "bytes32"
+        },
+        {
+          "indexed": true,
+          "name": "challengeID",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "name": "result",
+          "type": "uint8"
+        },
+        {
+          "indexed": false,
+          "name": "rewardPool",
+          "type": "uint256"
+        }
+      ],
+      "name": "ChallengeResolved",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "name": "challengeID",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "name": "voter",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "name": "reward",
+          "type": "uint256"
+        }
+      ],
+      "name": "ChallengeRewardClaimed",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "name": "challengeID",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "name": "voter",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "name": "voteHash",
+          "type": "bytes32"
+        }
+      ],
+      "name": "ChallengeVoteCommitted",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "name": "challengeID",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "name": "voter",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "name": "yesWieght",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "name": "noWeight",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "name": "salt",
+          "type": "uint256"
+        }
+      ],
+      "name": "ChallengeVoteRevealed",
+      "type": "event"
+    },
+    {
+      "constant": true,
+      "inputs": [
+        {
+          "name": "data",
+          "type": "bytes32"
+        }
+      ],
+      "name": "isEntryActive",
+      "outputs": [
+        {
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [
+        {
+          "name": "key",
+          "type": "bytes24"
+        }
+      ],
+      "name": "get",
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [
+        {
+          "name": "challengeID",
+          "type": "uint256"
+        },
+        {
+          "name": "voter",
+          "type": "address"
+        }
+      ],
+      "name": "voteSummary",
+      "outputs": [
+        {
+          "name": "state",
+          "type": "uint8"
+        },
+        {
+          "name": "commit",
+          "type": "bytes32"
+        },
+        {
+          "name": "yesWeight",
+          "type": "uint256"
+        },
+        {
+          "name": "noWeight",
+          "type": "uint256"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "data",
+          "type": "bytes32"
+        },
+        {
+          "name": "stake",
+          "type": "uint256"
+        }
+      ],
+      "name": "apply",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "data",
+          "type": "bytes32"
+        },
+        {
+          "name": "amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "deposit",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "data",
+          "type": "bytes32"
+        },
+        {
+          "name": "amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "withdraw",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "data",
+          "type": "bytes32"
+        }
+      ],
+      "name": "exit",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "data",
+          "type": "bytes32"
+        }
+      ],
+      "name": "initiateChallenge",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "challengeID",
+          "type": "uint256"
+        },
+        {
+          "name": "commitValue",
+          "type": "bytes32"
+        }
+      ],
+      "name": "commitVote",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "challengeID",
+          "type": "uint256"
+        },
+        {
+          "name": "yesWeight",
+          "type": "uint256"
+        },
+        {
+          "name": "noWeight",
+          "type": "uint256"
+        },
+        {
+          "name": "salt",
+          "type": "uint256"
+        }
+      ],
+      "name": "revealVote",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "challengeID",
+          "type": "uint256"
+        }
+      ],
+      "name": "resolveChallenge",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "challengeID",
+          "type": "uint256"
+        }
+      ],
+      "name": "claimReward",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ],
+  "Parameters": [
+    {
+      "constant": true,
+      "inputs": [
+        {
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "name": "proposals",
+      "outputs": [
+        {
+          "name": "snapshotBlockno",
+          "type": "uint256"
+        },
+        {
+          "name": "expiration",
+          "type": "uint256"
+        },
+        {
+          "name": "changeCount",
+          "type": "uint256"
+        },
+        {
+          "name": "currentYesCount",
+          "type": "uint256"
+        },
+        {
+          "name": "currentNoCount",
+          "type": "uint256"
+        },
+        {
+          "name": "totalPossibleVoteCount",
+          "type": "uint256"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "nextProposalNonce",
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [
+        {
+          "name": "",
+          "type": "bytes32"
+        }
+      ],
+      "name": "params",
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "token",
+      "outputs": [
+        {
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "name": "_token",
+          "type": "address"
+        },
+        {
+          "name": "keys",
+          "type": "bytes32[]"
+        },
+        {
+          "name": "values",
+          "type": "uint256[]"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "name": "proposalID",
+          "type": "uint256"
+        }
+      ],
+      "name": "NewProposal",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "name": "proposalID",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "name": "voter",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "name": "yesCount",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "name": "noCount",
+          "type": "uint256"
+        }
+      ],
+      "name": "ProposalVoted",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "name": "key",
+          "type": "bytes32"
+        },
+        {
+          "indexed": false,
+          "name": "value",
+          "type": "uint256"
+        }
+      ],
+      "name": "ParameterChanged",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "name": "proposalID",
+          "type": "uint256"
+        }
+      ],
+      "name": "ProposalResolved",
+      "type": "event"
+    },
+    {
+      "constant": true,
+      "inputs": [
+        {
+          "name": "key",
+          "type": "bytes32"
+        }
+      ],
+      "name": "get",
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [
+        {
+          "name": "key",
+          "type": "bytes32"
+        }
+      ],
+      "name": "getZeroable",
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [
+        {
+          "name": "proposalID",
+          "type": "uint256"
+        },
+        {
+          "name": "voter",
+          "type": "address"
+        }
+      ],
+      "name": "hasVoted",
+      "outputs": [
+        {
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [
+        {
+          "name": "proposalID",
+          "type": "uint256"
+        },
+        {
+          "name": "changeIndex",
+          "type": "uint256"
+        }
+      ],
+      "name": "getProposalChange",
+      "outputs": [
+        {
+          "name": "",
+          "type": "bytes32"
+        },
+        {
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "keys",
+          "type": "bytes32[]"
+        },
+        {
+          "name": "values",
+          "type": "uint256[]"
+        }
+      ],
+      "name": "propose",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "proposalID",
+          "type": "uint256"
+        },
+        {
+          "name": "yesCount",
+          "type": "uint256"
+        },
+        {
+          "name": "noCount",
+          "type": "uint256"
+        }
+      ],
+      "name": "vote",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "proposalID",
+          "type": "uint256"
+        }
+      ],
+      "name": "resolve",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ]
+}

@@ -1,51 +1,47 @@
 const delay = require('delay')
 const Koa = require('koa')
 
-const knex = require('knex')({
-  client: 'sqlite3',
-  connection: ':memory:',
-})
+const Web3Interface = require('./app/mock')
 
-const bookshelf = require('bookshelf')(knex)
 const app = new Koa()
+let web3 = null
 
-async function sendResolveTransaction(address, isTCR) {
-  // TODO
-  console.log('sendResolveTransaction', address, isTCR)
+async function onNewTask(address, onChainID, resolveTime, blockNumber) {
+  console.log('NEW TASK', address, onChainID, resolveTime, blockNumber)
 }
 
-async function queryResolveTime(address, onChainID, isTCR) {
-  // TODO
-  console.log('queryResolveTime', address, onChainID, isTCR)
-  return 0
+async function onTaskResolved(address, onChainID, blockNumber) {
+  console.log('TASK RESOLVED', address, onChainID, resolveTime, blockNumber)
 }
 
-async function handleNewEvent(address, onChainID) {
-  // TODO
-  console.log('handleNewEvent', address, onChainID)
+async function onEventLoop() {
+  console.log('EVENT LOOP')
 }
 
-async function handleResolveEvent(address, onChainID) {
-  // TODO
-  console.log('handleResolveEvent', address, onChainID)
-}
+// TODO: Initialize database here
 
-async function handleSubscribe(address, isTCR) {
-  // TODO
-}
+// TODO: Initialize add/remove address route here
 
-async function handleUnsubscribe(address) {
-  // TODO
-}
-
-app.use(async ctx => {
-  ctx.body = 'Hello, World!'
-})
 ;(async () => {
-  while (true) {
-    await delay(1000)
-    // TODO
-  }
-})()
+  // Initialize Web3Interface
+  web3 = new Web3Interface(
+    {
+      '0xe2533EF05C50Ed4C2E429EAC21F045Def751a1dD': true,
+      '0x53704BBfaF366706C0DDb19B4fBd10b93Ee50A6A': false,
+    },
+    3464700,
+    15,
+    onNewTask,
+    onTaskResolved,
+  )
 
-app.listen(9999)
+  // Run the event loop every 1 second
+  ;(async () => {
+    while (true) {
+      await delay(1000)
+      await onEventLoop()
+    }
+  })()
+
+  app.listen(9999)
+})()

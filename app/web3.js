@@ -1,17 +1,31 @@
 const Web3 = require('web3')
 const delay = require('delay')
-
 const abis = require('./abi')
 
 const web3 = new Web3('wss://rinkeby.infura.io/ws')
 const tcr = abis.TCR
 const params = abis.Parameters
 
+const sender = new Web3(
+  new Web3.providers.IpcProvider(
+    '/home/bun/.ethereum/rinkeby/geth.ipc',
+    require('net'),
+  ),
+)
+
 class Web3Interface {
-  constructor(contracts, lastBlock, lookBehind, onNewTask, onTaskResolved) {
+  constructor(
+    contracts,
+    lastBlock,
+    lookBehind,
+    onNewTask,
+    onTaskResolved,
+    onTaskNotPassed,
+  ) {
     this.hasSubscription = false
     this.onNewTask = onNewTask
     this.onTaskResolved = onTaskResolved
+    this.onTaskNotPassed = onTaskNotPassed
     this.contracts = contracts
     this.lastBlock = lastBlock
     this.lookBehind = lookBehind
@@ -24,7 +38,36 @@ class Web3Interface {
   }
 
   sendResolveTransaction(addr, onChainID) {
-    throw new Error('Not Implemented')
+    // throw new Error('Not Implemented')
+    console.log('We need to send resolve', addr, onChainID)
+    const isTCR = this.contracts[addr]
+    if (isTCR === undefined) {
+      console.log("This address doesn't exist in dictionary")
+      return
+    }
+
+    ;(async () => {
+      const accountAddress = (await sender.eth.getAccounts())[0]
+      if (!isTCR) {
+        const contract = new sender.eth.Contract(params, addr)
+        contract.methods
+          .resolve(onChainID)
+          .estimateGas()
+          .then(async gas => {
+            await contract.methods
+              .resolve(onChainID)
+              .send({ from: accountAddress, gas: 200000 })
+          })
+          .catch(() => this.onTaskNotPassed(addr, onChainID))
+      } else {
+        const contract = new sender.eth.Contract(tcr, addr)
+        console.log(addr, onChainID)
+        await contract.methods.resolveChallenge(onChainID).send({
+          from: accountAddress,
+          gas: 200000,
+        })
+      }
+    })()
   }
 
   addContract(addr, isTCR) {
@@ -56,24 +99,33 @@ class Web3Interface {
           return
         }
 
-        let onChainID
-        let resolveTimestamp
-
         if (isTCR) {
           const contract = new web3.eth.Contract(tcr, addr)
           contract._decodeEventABI.call(
             contract._generateEventOptions('allevents').event,
             result,
           )
-
-          if (result.event !== 'ChallengeInitiated') {
-            return
+          const onChainID = result.returnValues.challengeID
+          switch (result.event) {
+            case 'ChallengeInitiated': {
+              const resolveTimestamp = (await contract.methods
+                .challenges(onChainID)
+                .call()).revealEndTime
+              this.onNewTask(
+                addr,
+                onChainID,
+                new Date(resolveTimestamp * 1000),
+                result.blockNumber,
+              )
+              return
+            }
+            case 'ChallengeResolved': {
+              this.onTaskResolved(addr, onChainID, result.blockNumber)
+              return
+            }
+            default:
+              return
           }
-
-          onChainID = result.returnValues.challengeID
-          resolveTimestamp = (await contract.methods
-            .challenges(onChainID)
-            .call()).revealEndTime
         } else {
           const contract = new web3.eth.Contract(params, addr)
           contract._decodeEventABI.call(
@@ -81,22 +133,29 @@ class Web3Interface {
             result,
           )
 
-          if (result.event !== 'NewProposal') {
-            return
+          const onChainID = result.returnValues.proposalID
+          switch (result.event) {
+            case 'NewProposal': {
+              const resolveTimestamp = (await contract.methods
+                .proposals(onChainID)
+                .call()).expiration
+              this.onNewTask(
+                addr,
+                onChainID,
+                new Date(resolveTimestamp * 1000),
+                result.blockNumber,
+              )
+              return
+            }
+            case 'ProposalResolved': {
+              console.log('EVE', addr, onChainID)
+              this.onTaskResolved(addr, onChainID, result.blockNumber)
+              return
+            }
+            default:
+              return
           }
-
-          onChainID = result.returnValues.proposalID
-          resolveTimestamp = (await contract.methods
-            .proposals(onChainID)
-            .call()).expiration
         }
-
-        this.onNewTask(
-          addr,
-          onChainID,
-          new Date(resolveTimestamp * 1000),
-          result.blockNumber,
-        )
       },
     )
   }

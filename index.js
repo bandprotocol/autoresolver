@@ -3,7 +3,7 @@ const Koa = require('koa')
 const Sequelize = require('sequelize')
 const Op = Sequelize.Op
 
-const Web3Interface = require('./app/mock')
+const Web3Interface = require('./app/web3')
 
 const app = new Koa()
 let web3 = null
@@ -44,8 +44,55 @@ async function onNewTask(address, onChainID, resolveTime, blockNumber) {
   )
 }
 
+async function onTaskNotPassed(address, onChainID) {
+  console.log('NOT RESOLVE', address, onChainID)
+  const task = await Task.findOne({
+    where: {
+      contractID: addressToID[address],
+      onChainID: onChainID,
+    },
+  })
+
+  if (!task) {
+    await Task.create({
+      contractID: addressToID[address],
+      onChainID,
+      finishedAt: new Date(),
+      status: 'NOT_PASSED',
+    })
+    return
+  }
+  await Task.update(
+    {
+      status: 'NOT_PASSED',
+    },
+    {
+      where: {
+        contractID: addressToID[address],
+        onChainID: onChainID,
+      },
+    },
+  )
+}
+
 async function onTaskResolved(address, onChainID, blockNumber) {
-  console.log('Resolve', addressToID[address], onChainID)
+  console.log('RESOLVED', address, onChainID, blockNumber)
+  const task = await Task.findOne({
+    where: {
+      contractID: addressToID[address],
+      onChainID: onChainID,
+    },
+  })
+
+  if (!task) {
+    await Task.create({
+      contractID: addressToID[address],
+      onChainID,
+      finishedAt: new Date(),
+      status: 'RESOLVED',
+    })
+    return
+  }
   await Task.update(
     {
       status: 'RESOLVED',
@@ -57,13 +104,6 @@ async function onTaskResolved(address, onChainID, blockNumber) {
       },
     },
   )
-
-  const tasks = await Task.findAll({
-    where: {
-      contractID: addressToID[address],
-      onChainID: onChainID,
-    },
-  })
 
   await Setting.update(
     {
@@ -95,6 +135,12 @@ async function onEventLoop() {
       status: 'RESOLVED',
     },
   })
+  const notPassedTask = await Task.findAll({
+    where: {
+      status: 'NOT_PASSED',
+    },
+  })
+
   console.log(
     'Length = ',
     allTask.length,
@@ -104,6 +150,8 @@ async function onEventLoop() {
     resolvedTask.length,
     'Resolving',
     resolveingTask.length,
+    'Not passed',
+    notPassedTask.length,
   )
   const now = new Date()
   const needResolvedTasks = await Task.findAll({
@@ -217,6 +265,7 @@ const Setting = sequelize.define('setting', {
     15,
     onNewTask,
     onTaskResolved,
+    onTaskNotPassed,
   )
 
   // Run the event loop every 1 second

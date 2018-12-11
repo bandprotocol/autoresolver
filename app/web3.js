@@ -42,7 +42,7 @@ class Web3Interface {
     })()
   }
 
-  sendResolveTransaction(addr, onChainID) {
+  sendResolveTransaction(addr, onChainID, nonce) {
     console.log('We need to send resolve', addr, onChainID)
     const isTCR = this.contracts[addr]
     if (isTCR === undefined) {
@@ -69,17 +69,29 @@ class Web3Interface {
           .then(async _ => {
             await contract.methods
               .resolve(onChainID)
-              .send({ from: accountAddress, gas: 200000 })
+              .send({ from: accountAddress, gas: 200000, nonce })
           })
           .catch(() => this.onTaskNotPassed(addr, onChainID))
       } else {
         const contract = new sender.eth.Contract(tcr, addr)
-        await contract.methods.resolveChallenge(onChainID).send({
-          from: accountAddress,
-          gas: 200000,
-        })
+        contract.methods
+          .resolveChallenge(onChainID)
+          .estimateGas()
+          .then(async _ => {
+            await contract.methods.resolveChallenge(onChainID).send({
+              from: accountAddress,
+              gas: 200000,
+              nonce,
+            })
+          })
+          .catch(() => this.onTaskNotPassed(addr, onChainID))
       }
     })()
+  }
+
+  async getNonce() {
+    const accountAddress = (await sender.eth.getAccounts())[0]
+    return await sender.eth.getTransactionCount(accountAddress, 'pending')
   }
 
   addContract(addr, isTCR) {

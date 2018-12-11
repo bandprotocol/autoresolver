@@ -8,6 +8,8 @@ const Web3Interface = require('./app/web3')
 const app = new Koa()
 let web3 = null
 
+const waitTime = 90000
+
 const addressToID = {}
 
 async function onNewTask(address, onChainID, resolveTime, blockNumber) {
@@ -64,6 +66,9 @@ async function onTaskNotPassed(address, onChainID) {
     })
     return
   }
+
+  if (task.status === 'RESOLVED') return
+
   await Task.update(
     {
       status: 'NOT_PASSED',
@@ -153,6 +158,8 @@ async function onEventLoop() {
     },
   })
 
+  const nonce = await web3.getNonce()
+
   console.log(
     'Length = ',
     allTask.length,
@@ -164,7 +171,11 @@ async function onEventLoop() {
     resolveingTask.length,
     'Not passed',
     notPassedTask.length,
+    'Pending resolve',
+    nonce,
   )
+
+  // Send resolve after waiting
   const now = new Date()
   const needResolvedTasks = await Task.findAll({
     include: [
@@ -184,7 +195,34 @@ async function onEventLoop() {
 
   for (const task of needResolvedTasks) {
     web3.sendResolveTransaction(task.contract.address, task.onChainID)
-    task.update({ status: 'RESOLVING' })
+    const now = new Date().getTime()
+    const nextTxSent = new Date(now + waitTime)
+    task.update({ status: 'RESOLVING', nextTxSent })
+  }
+
+  // Resend resolve in some bad case happen
+  const needResendTasks = await Task.findAll({
+    include: [
+      {
+        model: Contract,
+      },
+    ],
+    where: {
+      status: {
+        [Op.like]: 'RESOLVING',
+      },
+      nextTxSent: {
+        [Op.lt]: now,
+      },
+    },
+  })
+
+  console.log('Nonce:', nonce)
+  for (const task of needResendTasks) {
+    web3.sendResolveTransaction(task.contract.address, task.onChainID, nonce)
+    const now = new Date().getTime()
+    const nextTxSent = new Date(now + waitTime)
+    task.update({ nextTxSent })
   }
 }
 
@@ -225,6 +263,7 @@ const Task = sequelize.define(
     },
     finishedAt: Sequelize.DATE,
     status: Sequelize.STRING,
+    nextTxSent: Sequelize.DATE,
   },
   {
     indexes: [
@@ -261,6 +300,11 @@ const Setting = sequelize.define('setting', {
   await Setting.create({
     key: 'last_block_processed',
     value: 0,
+  })
+
+  await Setting.create({
+    key: 'wait_until_resend',
+    value: 90,
   })
 
   const addressList = await Contract.findAll()

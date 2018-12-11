@@ -2,6 +2,8 @@ const Web3 = require('web3')
 const delay = require('delay')
 const abis = require('./abi')
 
+const config = require('../config')
+
 const reader = new Web3('wss://rinkeby.infura.io/ws')
 const tcr = abis.TCR
 const params = abis.Parameters
@@ -13,7 +15,7 @@ const sender = new Web3(
   ),
 )
 
-const passPhase = 'bun@band'
+const passPhase = config.accountPassword
 
 class Web3Interface {
   constructor(
@@ -66,12 +68,16 @@ class Web3Interface {
         contract.methods
           .resolve(onChainID)
           .estimateGas()
-          .then(async _ => {
+          .then(async gas => {
+            console.log('GAssssssssssss', gas)
             await contract.methods
               .resolve(onChainID)
               .send({ from: accountAddress, gas: 200000, nonce })
           })
-          .catch(() => this.onTaskNotPassed(addr, onChainID))
+          .catch(err => {
+            console.log(err)
+            this.onTaskNotPassed(addr, onChainID)
+          })
       } else {
         const contract = new sender.eth.Contract(tcr, addr)
         contract.methods
@@ -138,7 +144,7 @@ class Web3Interface {
               this.onNewTask(
                 addr,
                 onChainID,
-                new Date(resolveTimestamp * 1000),
+                new Date(resolveTimestamp * 1000 + 10000),
                 result.blockNumber,
               )
               return
@@ -166,7 +172,7 @@ class Web3Interface {
               this.onNewTask(
                 addr,
                 onChainID,
-                new Date(resolveTimestamp * 1000),
+                new Date(resolveTimestamp * 1000 + 10000),
                 result.blockNumber,
               )
               return

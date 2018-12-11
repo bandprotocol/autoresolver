@@ -4,11 +4,12 @@ const Sequelize = require('sequelize')
 const Op = Sequelize.Op
 
 const Web3Interface = require('./app/web3')
+const config = require('./config')
 
 const app = new Koa()
 let web3 = null
 
-const waitTime = 90000
+let waitTime = 0
 
 const addressToID = {}
 
@@ -26,7 +27,7 @@ async function onNewTask(address, onChainID, resolveTime, blockNumber) {
   })
 
   if (!task) {
-    const mt = await Task.create({
+    await Task.create({
       contractID: addressToID[address],
       onChainID,
       finishedAt: resolveTime,
@@ -41,7 +42,7 @@ async function onNewTask(address, onChainID, resolveTime, blockNumber) {
     {
       where: {
         key: {
-          [Op.like]: 'last_block_processed',
+          [Op.like]: 'lastBlock',
         },
       },
     },
@@ -119,7 +120,7 @@ async function onTaskResolved(address, onChainID, blockNumber) {
     {
       where: {
         key: {
-          [Op.like]: 'last_block_processed',
+          [Op.like]: 'lastBlock',
         },
       },
     },
@@ -127,7 +128,6 @@ async function onTaskResolved(address, onChainID, blockNumber) {
 }
 
 async function onEventLoop() {
-  // console.log('EVENT LOOP')
   const allTask = await Task.findAll()
   const waitingTask = await Task.findAll({
     where: {
@@ -161,7 +161,7 @@ async function onEventLoop() {
   const nonce = await web3.getNonce()
 
   console.log(
-    'Length = ',
+    'All tasks  =',
     allTask.length,
     'Waiting',
     waitingTask.length,
@@ -171,8 +171,6 @@ async function onEventLoop() {
     resolveingTask.length,
     'Not passed',
     notPassedTask.length,
-    'Pending resolve',
-    nonce,
   )
 
   // Send resolve after waiting
@@ -227,8 +225,9 @@ async function onEventLoop() {
 }
 
 // TODO: Initialize database here
-const sequelize = new Sequelize('db', 'band', 'band', {
-  dialect: 'sqlite',
+const sequelize = new Sequelize('resolver', 'root', config.dbPassword, {
+  dialect: 'mysql',
+  host: 'wiki.chjypicevp5k.ap-southeast-1.rds.amazonaws.com',
   logging: false,
 })
 
@@ -284,43 +283,42 @@ const Setting = sequelize.define('setting', {
 
 // TODO: Initialize add/remove address route here
 ;(async () => {
-  // TODO: Initialize everything here
-  await sequelize.sync()
-  await Contract.create({
-    address: '0xe2533EF05C50Ed4C2E429EAC21F045Def751a1dD',
-    contractType: 'TCR',
-    subscribe: true,
-  })
-  await Contract.create({
-    address: '0x53704BBfaF366706C0DDb19B4fBd10b93Ee50A6A',
-    contractType: 'PARAMETER',
-    subscribe: true,
-  })
-
-  await Setting.create({
-    key: 'last_block_processed',
-    value: 0,
-  })
-
-  await Setting.create({
-    key: 'wait_until_resend',
-    value: 90,
-  })
-
-  const addressList = await Contract.findAll()
-  addressList.forEach(address => {
-    const contract = address.get({ plain: true })
+  const contractList = await Contract.findAll()
+  const contracts = {}
+  contractList.forEach(contract => {
     addressToID[contract.address] = contract.id
+    contracts[contract.address] = contract.contractType === 'TCR'
   })
 
-  // Initialize Web3Interface
-  web3 = new Web3Interface(
-    {
-      '0xe2533EF05C50Ed4C2E429EAC21F045Def751a1dD': true,
-      '0x53704BBfaF366706C0DDb19B4fBd10b93Ee50A6A': false,
+  const lastBlock = (await Setting.findOne({
+    where: {
+      key: {
+        [Op.like]: 'lastBlock',
+      },
     },
-    3464700,
-    15,
+  })).value
+
+  const lookBehind = (await Setting.findOne({
+    where: {
+      key: {
+        [Op.like]: 'lookBehind',
+      },
+    },
+  })).value
+
+  waitTime = (await Setting.findOne({
+    where: {
+      key: {
+        [Op.like]: 'waitTime',
+      },
+    },
+  })).value
+
+  // // Initialize Web3Interface
+  web3 = new Web3Interface(
+    contracts,
+    lastBlock,
+    lookBehind,
     onNewTask,
     onTaskResolved,
     onTaskNotPassed,

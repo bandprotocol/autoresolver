@@ -2,7 +2,7 @@ const Web3 = require('web3')
 const delay = require('delay')
 const abis = require('./abi')
 
-const web3 = new Web3('wss://rinkeby.infura.io/ws')
+const reader = new Web3('wss://rinkeby.infura.io/ws')
 const tcr = abis.TCR
 const params = abis.Parameters
 
@@ -12,6 +12,8 @@ const sender = new Web3(
     require('net'),
   ),
 )
+
+const passPhase = 'bun@band'
 
 class Web3Interface {
   constructor(
@@ -30,7 +32,10 @@ class Web3Interface {
     this.lastBlock = lastBlock
     this.lookBehind = lookBehind
     ;(async () => {
-      while (!web3.currentProvider.connected) {
+      while (!reader.currentProvider.connected) {
+        await delay(100)
+      }
+      while (!sender.currentProvider.connected) {
         await delay(100)
       }
       this.subscribeAll()
@@ -38,7 +43,6 @@ class Web3Interface {
   }
 
   sendResolveTransaction(addr, onChainID) {
-    // throw new Error('Not Implemented')
     console.log('We need to send resolve', addr, onChainID)
     const isTCR = this.contracts[addr]
     if (isTCR === undefined) {
@@ -48,12 +52,21 @@ class Web3Interface {
 
     ;(async () => {
       const accountAddress = (await sender.eth.getAccounts())[0]
+      if (
+        !(await sender.eth.personal.unlockAccount(
+          accountAddress,
+          passPhase,
+          100,
+        ))
+      ) {
+        console.log('Cannot unlock account')
+      }
       if (!isTCR) {
         const contract = new sender.eth.Contract(params, addr)
         contract.methods
           .resolve(onChainID)
           .estimateGas()
-          .then(async gas => {
+          .then(async _ => {
             await contract.methods
               .resolve(onChainID)
               .send({ from: accountAddress, gas: 200000 })
@@ -61,7 +74,6 @@ class Web3Interface {
           .catch(() => this.onTaskNotPassed(addr, onChainID))
       } else {
         const contract = new sender.eth.Contract(tcr, addr)
-        console.log(addr, onChainID)
         await contract.methods.resolveChallenge(onChainID).send({
           from: accountAddress,
           gas: 200000,
@@ -79,7 +91,7 @@ class Web3Interface {
   }
 
   subscribeAll() {
-    web3.eth.subscribe(
+    reader.eth.subscribe(
       'logs',
       {
         address: Object.keys(this.contracts),
@@ -100,7 +112,7 @@ class Web3Interface {
         }
 
         if (isTCR) {
-          const contract = new web3.eth.Contract(tcr, addr)
+          const contract = new reader.eth.Contract(tcr, addr)
           contract._decodeEventABI.call(
             contract._generateEventOptions('allevents').event,
             result,
@@ -127,7 +139,7 @@ class Web3Interface {
               return
           }
         } else {
-          const contract = new web3.eth.Contract(params, addr)
+          const contract = new reader.eth.Contract(params, addr)
           contract._decodeEventABI.call(
             contract._generateEventOptions('allevents').event,
             result,
@@ -148,7 +160,6 @@ class Web3Interface {
               return
             }
             case 'ProposalResolved': {
-              console.log('EVE', addr, onChainID)
               this.onTaskResolved(addr, onChainID, result.blockNumber)
               return
             }

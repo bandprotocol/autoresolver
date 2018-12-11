@@ -38,7 +38,9 @@ async function onNewTask(address, onChainID, resolveTime, blockNumber) {
     },
     {
       where: {
-        key: 'last_block_processed',
+        key: {
+          [Op.like]: 'last_block_processed',
+        },
       },
     },
   )
@@ -111,7 +113,9 @@ async function onTaskResolved(address, onChainID, blockNumber) {
     },
     {
       where: {
-        key: 'last_block_processed',
+        key: {
+          [Op.like]: 'last_block_processed',
+        },
       },
     },
   )
@@ -122,22 +126,30 @@ async function onEventLoop() {
   const allTask = await Task.findAll()
   const waitingTask = await Task.findAll({
     where: {
-      status: 'WAITING',
+      status: {
+        [Op.like]: 'WAITING',
+      },
     },
   })
   const resolveingTask = await Task.findAll({
     where: {
-      status: 'RESOLVING',
+      status: {
+        [Op.like]: 'RESOLVING',
+      },
     },
   })
   const resolvedTask = await Task.findAll({
     where: {
-      status: 'RESOLVED',
+      status: {
+        [Op.like]: 'RESOLVED',
+      },
     },
   })
   const notPassedTask = await Task.findAll({
     where: {
-      status: 'NOT_PASSED',
+      status: {
+        [Op.like]: 'NOT_PASSED',
+      },
     },
   })
 
@@ -161,7 +173,9 @@ async function onEventLoop() {
       },
     ],
     where: {
-      status: 'WAITING',
+      status: {
+        [Op.like]: 'WAITING',
+      },
       finishedAt: {
         [Op.lt]: now,
       },

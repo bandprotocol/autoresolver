@@ -2,9 +2,12 @@ const delay = require('delay')
 const Koa = require('koa')
 const Sequelize = require('sequelize')
 const Op = Sequelize.Op
+const exec = require('child-process-promise').exec
 
 const Web3Interface = require('./app/web3')
 const config = require('./config')
+
+const ipc = config.gethConnection
 
 const app = new Koa()
 let web3 = null
@@ -127,52 +130,21 @@ async function onTaskResolved(address, onChainID, blockNumber) {
   )
 }
 
-async function onEventLoop() {
-  const allTask = await Task.findAll()
-  const waitingTask = await Task.findAll({
-    where: {
-      status: {
-        [Op.like]: 'WAITING',
-      },
-    },
-  })
-  const resolveingTask = await Task.findAll({
-    where: {
-      status: {
-        [Op.like]: 'RESOLVING',
-      },
-    },
-  })
-  const resolvedTask = await Task.findAll({
-    where: {
-      status: {
-        [Op.like]: 'RESOLVED',
-      },
-    },
-  })
-  const notPassedTask = await Task.findAll({
-    where: {
-      status: {
-        [Op.like]: 'NOT_PASSED',
-      },
-    },
-  })
-
-  const nonce = await web3.getNonce()
-
+async function onSendResolve(address, onChainID) {
   console.log(
-    'All tasks  =',
-    allTask.length,
-    'Waiting',
-    waitingTask.length,
-    'Resolved',
-    resolvedTask.length,
-    'Resolving',
-    resolveingTask.length,
-    'Not passed',
-    notPassedTask.length,
+    'Send resolve transaction to',
+    address,
+    'with onChainID',
+    onChainID,
   )
 
+  await Transaction.create({
+    onChainID,
+    contractID: addressToID[address],
+  })
+}
+
+async function onEventLoop() {
   // Send resolve after waiting
   const now = new Date()
   const needResolvedTasks = await Task.findAll({
@@ -214,8 +186,6 @@ async function onEventLoop() {
       },
     },
   })
-
-  console.log('Nonce:', nonce)
   for (const task of needResendTasks) {
     web3.sendResolveTransaction(task.contract.address, task.onChainID, nonce)
     const now = new Date().getTime()
@@ -276,9 +246,69 @@ const Task = sequelize.define(
 
 Task.belongsTo(Contract, { foreignKey: 'contractID' })
 
+const Transaction = sequelize.define('transaction', {
+  id: {
+    type: Sequelize.INTEGER,
+    primaryKey: true,
+    autoIncrement: true,
+  },
+  onChainID: {
+    allowNull: false,
+    type: Sequelize.INTEGER,
+  },
+})
+
+Transaction.belongsTo(Contract, { foreignKey: 'contractID' })
+
 const Setting = sequelize.define('setting', {
   key: Sequelize.STRING,
   value: Sequelize.INTEGER,
+})
+
+app.use(async ctx => {
+  const now = new Date()
+  const inOneDay = {
+    [Op.between]: [new Date(now.getTime() - 86400000), now],
+  }
+
+  const allTaskCount = await Task.count({
+    where: {
+      finishedAt: inOneDay,
+    },
+  })
+
+  const resolvedTaskCount = await Task.count({
+    where: {
+      finishedAt: inOneDay,
+      status: {
+        [Op.like]: 'RESOLVED',
+      },
+    },
+  })
+
+  const notPassedTaskCount = await Task.count({
+    where: {
+      finishedAt: inOneDay,
+      status: {
+        [Op.like]: 'NOT_PASSED',
+      },
+    },
+  })
+
+  const transactionSentCount = await Transaction.count({
+    where: {
+      createdAt: inOneDay,
+    },
+  })
+
+  const pendingTransactionCount = (await exec(
+    `geth attach --datadir ${ipc} --exec 'eth.pendingTransactions.length'`,
+  )).stdout
+  ctx.body = `
+  All task need to resolve today ${resolvedTaskCount}/${allTaskCount -
+    notPassedTaskCount} (Not passed proposal ${notPassedTaskCount})
+  Transaction sent ${transactionSentCount}
+  Pending transaction ${pendingTransactionCount}`
 })
 
 // TODO: Initialize add/remove address route here
@@ -322,6 +352,7 @@ const Setting = sequelize.define('setting', {
     onNewTask,
     onTaskResolved,
     onTaskNotPassed,
+    onSendResolve,
   )
 
   // Run the event loop every 1 second

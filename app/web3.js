@@ -8,9 +8,10 @@ const reader = new Web3('wss://rinkeby.infura.io/ws')
 const tcr = abis.TCR
 const params = abis.Parameters
 
+const ipc = config.gethConnection + 'geth.ipc'
 const sender = new Web3(
   new Web3.providers.IpcProvider(
-    '/home/bun/.ethereum/rinkeby/geth.ipc',
+    ipc,
     require('net'),
   ),
 )
@@ -25,11 +26,13 @@ class Web3Interface {
     onNewTask,
     onTaskResolved,
     onTaskNotPassed,
+    onSendResolve,
   ) {
     this.hasSubscription = false
     this.onNewTask = onNewTask
     this.onTaskResolved = onTaskResolved
     this.onTaskNotPassed = onTaskNotPassed
+    this.onSendResolve = onSendResolve
     this.contracts = contracts
     this.lastBlock = lastBlock
     this.lookBehind = lookBehind
@@ -68,8 +71,8 @@ class Web3Interface {
         contract.methods
           .resolve(onChainID)
           .estimateGas()
-          .then(async gas => {
-            console.log('GAssssssssssss', gas)
+          .then(async _ => {
+            this.onSendResolve(addr, onChainID)
             await contract.methods
               .resolve(onChainID)
               .send({ from: accountAddress, gas: 200000, nonce })
@@ -84,6 +87,7 @@ class Web3Interface {
           .resolveChallenge(onChainID)
           .estimateGas()
           .then(async _ => {
+            this.onSendResolve(addr, onChainID)
             await contract.methods.resolveChallenge(onChainID).send({
               from: accountAddress,
               gas: 200000,

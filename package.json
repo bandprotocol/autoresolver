@@ -5,6 +5,7 @@
   "repository": "git@github.com:bandprotocol/resolver.git",
   "author": "Band Protocol <connect@bandprotocol.com>",
   "dependencies": {
+    "child-process-promise": "^2.2.1",
     "delay": "^4.1.0",
     "koa": "^2.6.2",
     "mysql2": "^1.6.4",
